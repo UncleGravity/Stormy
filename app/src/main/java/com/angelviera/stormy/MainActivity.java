@@ -1,11 +1,14 @@
 package com.angelviera.stormy;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.squareup.okhttp.Call;
@@ -14,6 +17,9 @@ import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 
 
@@ -21,16 +27,33 @@ public class MainActivity extends ActionBarActivity {
 
     public static final String TAG = MainActivity.class.getSimpleName();
 
+    private CurrentWeather mCurrentWeather;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Button button = (Button) findViewById(R.id.goToButton);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Intent intent = new Intent(MainActivity.this, AsyncTestActivity.class);
+                //intent.putExtra(getString(R.string.key_name),name);
+                startActivity(intent);
+
+                //Toast.makeText(MainActivity.this,"Button Pressed",Toast.LENGTH_SHORT).show();
+            }
+        });
+
 
         if(isNetworkAvailable()){
             requestForecast();
         } else {
             Toast.makeText(this, getString(R.string.network_unavailable_message), Toast.LENGTH_LONG).show();
         }
+
 
 
 
@@ -72,20 +95,43 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onResponse(Response response) throws IOException {
                 try {
-                    Log.v(TAG, response.body().string());
-
+                    String jsonData = response.body().string();
                     if(response.isSuccessful()){
-
+                        mCurrentWeather = getCurrentDetails(jsonData);
                     }
                     else{
                         alertUserAboutError();
                     }
                 } catch (IOException e) {
-                    Log.e(TAG, "Exception caught: ", e);
+                    Log.e(TAG, "IOException caught: ", e);
+                } catch (JSONException e){
+                    Log.e(TAG, "JSONException caught: ", e);
                 }
             }
         });
 
+    }
+
+    private CurrentWeather getCurrentDetails(String jsonData) throws JSONException {
+
+        JSONObject forecast = new JSONObject(jsonData);
+
+        //String timezone = forecast.getString("timezone");
+        //Log.i(TAG,"From JSON: " + timezone);
+
+        JSONObject currently = forecast.getJSONObject("currently");
+
+        CurrentWeather currentWeather = new CurrentWeather();
+        currentWeather.setHumidity(currently.getDouble("humidity"));
+        currentWeather.setTime(currently.getLong("time"));
+        currentWeather.setIcon(currently.getString("icon"));
+        currentWeather.setPrecipChance(currently.getDouble("precipProbability"));
+        currentWeather.setSummary(currently.getString("summary"));
+        currentWeather.setTemperature(currently.getDouble("temperature"));
+        currentWeather.setTimeZone(forecast.getString("timezone"));
+
+        Log.d(TAG, currentWeather.getFormattedTime());
+        return currentWeather;
     }
 
     private void alertUserAboutError() {
