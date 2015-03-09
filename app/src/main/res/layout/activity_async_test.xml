@@ -11,7 +11,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Button"
+        android:text="Sync"
         android:id="@+id/asyncButton"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"
@@ -43,7 +43,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Button"
+        android:text="Some Action"
         android:id="@+id/free_button"
         android:layout_alignLeft="@+id/asyncButton"
         android:layout_alignStart="@+id/asyncButton"/>

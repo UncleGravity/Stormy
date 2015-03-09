@@ -5,7 +5,7 @@ import java.util.Date;
 import java.util.TimeZone;
 
 /**
- * Created by aviera1 on 3/8/15.
+ * Created by Angel Viera on 3/8/15.
  */
 public class CurrentWeather {
 
@@ -38,6 +38,43 @@ public class CurrentWeather {
         return mIcon;
     }
 
+    public int getIconId(){
+        int iconId = R.mipmap.clear_day;
+
+        if (mIcon.equals("clear-day")) {
+            iconId = R.mipmap.clear_day;
+        }
+        else if (mIcon.equals("clear-night")) {
+            iconId = R.mipmap.clear_night;
+        }
+        else if (mIcon.equals("rain")) {
+            iconId = R.mipmap.rain;
+        }
+        else if (mIcon.equals("snow")) {
+            iconId = R.mipmap.snow;
+        }
+        else if (mIcon.equals("sleet")) {
+            iconId = R.mipmap.sleet;
+        }
+        else if (mIcon.equals("wind")) {
+            iconId = R.mipmap.wind;
+        }
+        else if (mIcon.equals("fog")) {
+            iconId = R.mipmap.fog;
+        }
+        else if (mIcon.equals("cloudy")) {
+            iconId = R.mipmap.cloudy;
+        }
+        else if (mIcon.equals("partly-cloudy-day")) {
+            iconId = R.mipmap.partly_cloudy;
+        }
+        else if (mIcon.equals("partly-cloudy-night")) {
+            iconId = R.mipmap.cloudy_night;
+        }
+
+        return iconId;
+    }
+
     public void setIcon(String icon) {
         mIcon = icon;
     }
@@ -59,8 +96,8 @@ public class CurrentWeather {
         mTime = time;
     }
 
-    public double getTemperature() {
-        return mTemperature;
+    public int getTemperature() {
+        return (int) Math.round(mTemperature);
     }
 
     public void setTemperature(double temperature) {
@@ -75,8 +112,8 @@ public class CurrentWeather {
         mHumidity = humidity;
     }
 
-    public double getPrecipChance() {
-        return mPrecipChance;
+    public int getPrecipChance() {
+        return (int) Math.round(mPrecipChance * 100);
     }
 
     public void setPrecipChance(double precipChance) {
