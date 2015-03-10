@@ -1,7 +1,10 @@
 package com.angelviera.stormy;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.drawable.Drawable;
+import android.location.Geocoder;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -23,14 +26,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements LocationProvider.LocationCallback {
 
     public static final String TAG = MainActivity.class.getSimpleName();
+
+    private LocationProvider mLocationProvider;
 
     private CurrentWeather mCurrentWeather;
 
@@ -44,6 +51,10 @@ public class MainActivity extends ActionBarActivity {
     @InjectView(R.id.refreshImageView) ImageView mRefreshImageView;
 
     @InjectView(R.id.progressBar) ProgressBar mProgressBar;
+    @InjectView(R.id.degreeImageView) ImageView mDegreeImageView;
+
+   double mLatitude = 40.4313684;
+   double mLongitude = -79.9877103;
 
 
     /** START HERE
@@ -55,37 +66,48 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.inject(this);
 
-        /* Make button click segue into AsyncTestActivity
-        Button button = (Button) findViewById(R.id.goToButton);
-        button.setOnClickListener(new View.OnClickListener() {
+        mLocationProvider = new LocationProvider(this, this);
+
+        // LISTENER
+        // Segue into AsyncTestActivity (debug)
+        mDegreeImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Intent intent = new Intent(MainActivity.this, AsyncTestActivity.class);
                 //intent.putExtra(getString(R.string.key_name),name);
                 startActivity(intent);
-
-                //Toast.makeText(MainActivity.this,"Button Pressed",Toast.LENGTH_SHORT).show();
             }
         });
-        */
+
 
         mProgressBar.setVisibility(View.INVISIBLE);
 
-        final double latitude = 40.4313684;
-        final double longitude = -79.9877103;
-
+        // LISTENER
         mRefreshImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                requestForecast(latitude, longitude);
+                //request Forecast here
+                toggleRefresh();
+                mLocationProvider.connect();
             }
         });
 
         //Request weather, and update UI
-        requestForecast(latitude,longitude);
+        //requestForecast();
 
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        toggleRefresh();
+        mLocationProvider.connect();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mLocationProvider.disconnect();
     }
 
     /** Verify is there is a network connection.  Requires ACCESS_NETWORK_STATE permission.
@@ -107,14 +129,14 @@ public class MainActivity extends ActionBarActivity {
      *  Updates the UI with new data.
      */
 
-    private void requestForecast(double latitude, double longitude) {
+    private void requestForecast() {
 
         String apiKey = "4c70f5794678da3e752797b5c4a7bfdc";
-        String forecastUrl = "https://api.forecast.io/forecast/" + apiKey + "/" + latitude + "," + longitude;
+        String forecastUrl = "https://api.forecast.io/forecast/" + apiKey + "/" + mLatitude + "," + mLongitude;
 
         if(isNetworkAvailable()) {
 
-            toggleRefresh();
+            //toggleRefresh();
 
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
@@ -221,7 +243,21 @@ public class MainActivity extends ActionBarActivity {
         currentWeather.setSummary(currently.getString("summary"));
         currentWeather.setTemperature(currently.getDouble("temperature"));
         currentWeather.setTimeZone(forecast.getString("timezone"));
-        currentWeather.setLocation("Pittsburgh, PA"); //Dummy City
+        String city = "Turtles";
+
+        Geocoder gcd = new Geocoder(this, Locale.getDefault());
+        try {
+            List<android.location.Address> addresses = gcd.getFromLocation(mLatitude, mLongitude, 1);
+            if(addresses.size() > 0){
+                city = addresses.get(0).getLocality();
+
+                Log.d(TAG, addresses.get(0).getLocality());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        currentWeather.setLocation(city); //Dummy City
 
         Log.d(TAG, currentWeather.getFormattedTime());
         return currentWeather;
@@ -234,4 +270,20 @@ public class MainActivity extends ActionBarActivity {
         dialog.show(getFragmentManager(),"error_dialog");
     }
 
+    @Override
+    public void handleNewLocation(Location location) {
+
+        Log.d(TAG, "Location: " + location.toString());
+
+        mLatitude = location.getLatitude();
+        mLongitude = location.getLongitude();
+
+        requestForecast();
+        //LatLng latLng = new LatLng(currentLatitude, currentLongitude);
+
+        Log.d(TAG, "Lat: " + mLatitude);
+        Log.d(TAG, "Lon: " + mLongitude);
+
+        mLocationProvider.disconnect();
+    }
 }
