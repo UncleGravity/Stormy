@@ -26,7 +26,7 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:label="@string/app_name"
             android:screenOrientation="portrait" >
             <intent-filter>
@@ -36,12 +36,28 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".AsyncTestActivity"
+            android:name=".ui.AsyncTestActivity"
             android:label="@string/title_activity_async_test"
-            android:parentActivityName=".MainActivity" >
+            android:parentActivityName=".ui.MainActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.angelviera.stormy.MainActivity" />
+                android:value=".ui.MainActivity" />
+        </activity>
+        <activity
+            android:name=".ui.DailyForecastActivity"
+            android:label="@string/title_activity_daily_forecast"
+            android:parentActivityName=".ui.MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.angelviera.stormy.ui.MainActivity" />
+        </activity>
+        <activity
+            android:name=".ui.HourlyForecastActivity"
+            android:label="@string/title_activity_hourly_forecast"
+            android:parentActivityName=".ui.MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.angelviera.stormy.ui.MainActivity" />
         </activity>
     </application>
 

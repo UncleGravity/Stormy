@@ -1,4 +1,4 @@
-package com.angelviera.stormy;
+package com.angelviera.stormy.ui;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -8,6 +8,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import com.angelviera.stormy.R;
 
 
 public class AsyncTestActivity extends ActionBarActivity {

@@ -1,8 +1,9 @@
-package com.angelviera.stormy;
+package com.angelviera.stormy.ui;
 
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.net.ConnectivityManager;
@@ -16,12 +17,19 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.angelviera.stormy.R;
+import com.angelviera.stormy.location.LocationProvider;
+import com.angelviera.stormy.weather.Current;
+import com.angelviera.stormy.weather.Day;
+import com.angelviera.stormy.weather.Forecast;
+import com.angelviera.stormy.weather.Hour;
 import com.squareup.okhttp.Call;
 import com.squareup.okhttp.Callback;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -31,15 +39,17 @@ import java.util.Locale;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
+import butterknife.OnClick;
 
 
 public class MainActivity extends ActionBarActivity implements LocationProvider.LocationCallback {
 
     public static final String TAG = MainActivity.class.getSimpleName();
+    public static final String DAILY_FORECAST = "DAILY_FORECAST";
 
     private LocationProvider mLocationProvider;
 
-    private CurrentWeather mCurrentWeather;
+    private Forecast mForecast;
 
     @InjectView(R.id.timeLabel) TextView mTimeLabel;
     @InjectView(R.id.temperatureLabel) TextView mTemperatureLabel;
@@ -53,8 +63,9 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
     @InjectView(R.id.progressBar) ProgressBar mProgressBar;
     @InjectView(R.id.degreeImageView) ImageView mDegreeImageView;
 
-   double mLatitude = 40.4313684;
-   double mLongitude = -79.9877103;
+   private double mLatitude = 40.4313684;
+   private double mLongitude = -79.9877103;
+   private String mCity;
 
 
     /** START HERE
@@ -67,19 +78,6 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
         ButterKnife.inject(this);
 
         mLocationProvider = new LocationProvider(this, this);
-
-        // LISTENER
-        // Segue into AsyncTestActivity (debug)
-        mDegreeImageView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, AsyncTestActivity.class);
-                //intent.putExtra(getString(R.string.key_name),name);
-                startActivity(intent);
-            }
-        });
-
-
         mProgressBar.setVisibility(View.INVISIBLE);
 
         // LISTENER
@@ -92,9 +90,15 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
             }
         });
 
-        //Request weather, and update UI
-        //requestForecast();
-
+        // LISTENER
+        // Segue into AsyncTestActivity (debug)
+        mDegreeImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, AsyncTestActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 
     @Override
@@ -174,7 +178,8 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
                     try {
                         String jsonData = response.body().string();
                         if (response.isSuccessful()) {
-                            mCurrentWeather = getCurrentDetails(jsonData);
+
+                            mForecast = getForecastDetails(jsonData);
 
                             runOnUiThread(new Runnable() {
                                 @Override
@@ -182,6 +187,7 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
                                     updateDisplay();
                                 }
                             });
+
                         } else {
                             alertUserAboutError();
                         }
@@ -213,29 +219,87 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
     /** Update UI labels with new weather data.
      */
     private void updateDisplay() {
-        mTemperatureLabel.setText(mCurrentWeather.getTemperature() + "");
-        mTimeLabel.setText("At " + mCurrentWeather.getFormattedTime() + " it will be");
-        mHumidityValue.setText(mCurrentWeather.getHumidity() + "");
-        mPrecipValue.setText(mCurrentWeather.getPrecipChance() + "%");
-        mSummaryLabel.setText(mCurrentWeather.getSummary());
-        Drawable icon = getResources().getDrawable(mCurrentWeather.getIconId());
+        Current current = mForecast.getCurrentWeather();
+
+        mTemperatureLabel.setText(current.getTemperature() + "");
+        mTimeLabel.setText("At " + current.getFormattedTime() + " it will be");
+        mHumidityValue.setText(current.getHumidity() + "");
+        mPrecipValue.setText(current.getPrecipChance() + "%");
+        mSummaryLabel.setText(current.getSummary());
+        Drawable icon = getResources().getDrawable(current.getIconId());
         mIconImageView.setImageDrawable(icon);
-        mLocationLabel.setText(mCurrentWeather.getLocation());
+        mLocationLabel.setText(current.getLocation());
 
     }
 
-    /** Parse JSON data into the CurrentWeather object.
+    private Forecast getForecastDetails(String jsonData) throws JSONException, IOException {
+        Forecast forecast = new Forecast();
+
+        forecast.setCurrentWeather(getCurrentDetails(jsonData));
+        forecast.setHourlyForecast(getHourlyForecast(jsonData));
+        forecast.setDailyForecast(getDailyForecast(jsonData));
+
+        return forecast;
+    }
+
+    private Day[] getDailyForecast(String jsonData) throws JSONException{
+        JSONObject forecast = new JSONObject(jsonData); // Entire forecast.io data
+        String timezone = forecast.getString("timezone"); // Timezone
+
+        JSONObject daily = forecast.getJSONObject("daily"); // Hourly forecasts
+        JSONArray data = daily.getJSONArray("data"); // Hourly forecasts (as JSONArray)
+
+        Day[] days = new Day[data.length()];
+
+        for(int i = 0; i < data.length(); i++){
+            JSONObject jsonDay = data.getJSONObject(i);
+            days[i] = new Day();
+
+            days[i].setSummary(jsonDay.getString("summary"));
+            days[i].setIcon(jsonDay.getString("icon"));
+            days[i].setTemperatureMax(jsonDay.getLong("temperatureMax"));
+            days[i].setTime(jsonDay.getLong("time"));
+            days[i].setTimezone(timezone);
+        }
+
+        return days;
+    }
+
+    private Hour[] getHourlyForecast(String jsonData) throws JSONException {
+
+
+        JSONObject forecast = new JSONObject(jsonData); // Entire forecast.io data
+        String timezone = forecast.getString("timezone"); // Timezone
+        JSONObject hourly = forecast.getJSONObject("hourly"); // Hourly forecasts
+        JSONArray data = hourly.getJSONArray("data"); // Hourly forecasts (as JSONArray)
+
+        Hour[] hours = new Hour[data.length()]; // Array to return
+
+        for (int i = 0; i < data.length(); i++) {
+            JSONObject jsonHour = data.getJSONObject(i);
+            hours[i] = new Hour();
+
+            hours[i].setTime(jsonHour.getLong("time"));
+            hours[i].setIcon(jsonHour.getString("icon"));
+            hours[i].setSummary(jsonHour.getString("summary"));
+            hours[i].setTemperature(jsonHour.getDouble("temperature"));
+            hours[i].setTimeZone(timezone);
+        }
+
+        return hours;
+    }
+
+    /** Parse JSON data into the Current object.
      */
-    private CurrentWeather getCurrentDetails(String jsonData) throws JSONException {
+    private Current getCurrentDetails(String jsonData) throws JSONException, IOException {
 
         JSONObject forecast = new JSONObject(jsonData);
 
         //String timezone = forecast.getString("timezone");
-        //Log.i(TAG,"From JSON: " + timezone);
 
         JSONObject currently = forecast.getJSONObject("currently");
 
-        CurrentWeather currentWeather = new CurrentWeather();
+        Current currentWeather = new Current();
         currentWeather.setHumidity(currently.getDouble("humidity"));
         currentWeather.setTime(currently.getLong("time"));
         currentWeather.setIcon(currently.getString("icon"));
@@ -243,21 +307,9 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
         currentWeather.setSummary(currently.getString("summary"));
         currentWeather.setTemperature(currently.getDouble("temperature"));
         currentWeather.setTimeZone(forecast.getString("timezone"));
-        String city = "Turtles";
+        //mCity = "Turtles"; // Dummy City
 
-        Geocoder gcd = new Geocoder(this, Locale.getDefault());
-        try {
-            List<android.location.Address> addresses = gcd.getFromLocation(mLatitude, mLongitude, 1);
-            if(addresses.size() > 0){
-                city = addresses.get(0).getLocality();
-
-                Log.d(TAG, addresses.get(0).getLocality());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        currentWeather.setLocation(city); //Dummy City
+        currentWeather.setLocation(mCity);
 
         Log.d(TAG, currentWeather.getFormattedTime());
         return currentWeather;
@@ -278,6 +330,20 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
         mLatitude = location.getLatitude();
         mLongitude = location.getLongitude();
 
+        // Get City from coordinates
+        Geocoder gcd = new Geocoder(this, Locale.getDefault());
+        List<Address> addresses = null;
+        try {
+            addresses = gcd.getFromLocation(mLatitude, mLongitude, 1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if(addresses.size() > 0){
+            mCity = addresses.get(0).getLocality();
+            Log.d(TAG, addresses.get(0).getLocality());
+        }
+
         requestForecast();
         //LatLng latLng = new LatLng(currentLatitude, currentLongitude);
 
@@ -286,4 +352,12 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
 
         mLocationProvider.disconnect();
     }
+
+    @OnClick(R.id.dailyButton)
+    public void startDailyActivity(View view){
+        Intent intent = new Intent(this, DailyForecastActivity.class);
+        intent.putExtra(DAILY_FORECAST, mForecast.getDailyForecast());
+        startActivity(intent);
+    }
+
 }

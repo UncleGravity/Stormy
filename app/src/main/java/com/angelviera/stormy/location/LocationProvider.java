@@ -1,4 +1,4 @@
-package com.angelviera.stormy;
+package com.angelviera.stormy.location;
 
 import android.app.Activity;
 import android.content.Context;
