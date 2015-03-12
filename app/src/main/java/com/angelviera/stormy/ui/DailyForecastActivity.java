@@ -4,8 +4,10 @@ import android.app.ListActivity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.View;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.angelviera.stormy.R;
 import com.angelviera.stormy.adapters.DayAdapter;
@@ -13,16 +15,24 @@ import com.angelviera.stormy.weather.Day;
 
 import java.util.Arrays;
 
+import butterknife.ButterKnife;
+import butterknife.InjectView;
+
 public class DailyForecastActivity extends ListActivity {
 
     private Day[] mDays;
+    @InjectView(R.id.locationLabel) TextView mLocationLabel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_daily_forecast);
+        ButterKnife.inject(this);
 
         Intent intent = getIntent();
+        String city = intent.getExtras().getString("city");
+        mLocationLabel.setText(city);
+
         Parcelable[] parcelables = intent.getParcelableArrayExtra(MainActivity.DAILY_FORECAST);
         mDays = Arrays.copyOf(parcelables, parcelables.length, Day[].class);
 
@@ -30,26 +40,14 @@ public class DailyForecastActivity extends ListActivity {
         setListAdapter(adapter);
     }
 
-
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_daily_forecast, menu);
-        return true;
-    }
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+        super.onListItemClick(l, v, position, id);
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+        String dayOfTheWeek = mDays[position].getDayOfTheWeek();
+        String conditions = mDays[position].getSummary();
+        String highTemp = mDays[position].getTemperatureMax() + "";
+        String message = String.format("On %s, the high will be %s and it will be %s", dayOfTheWeek, highTemp, conditions);
+        Toast.makeText(this,message,Toast.LENGTH_LONG).show();
     }
 }

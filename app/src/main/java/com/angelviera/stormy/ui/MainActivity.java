@@ -46,6 +46,7 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
 
     public static final String TAG = MainActivity.class.getSimpleName();
     public static final String DAILY_FORECAST = "DAILY_FORECAST";
+    public static final String HOURLY_FORECAST = "HOURLY_FORECAST";
 
     private LocationProvider mLocationProvider;
 
@@ -335,13 +336,10 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
         List<Address> addresses = null;
         try {
             addresses = gcd.getFromLocation(mLatitude, mLongitude, 1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if(addresses.size() > 0){
             mCity = addresses.get(0).getLocality();
             Log.d(TAG, addresses.get(0).getLocality());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         requestForecast();
@@ -353,10 +351,18 @@ public class MainActivity extends ActionBarActivity implements LocationProvider.
         mLocationProvider.disconnect();
     }
 
-    @OnClick(R.id.dailyButton)
+    @OnClick (R.id.dailyButton)
     public void startDailyActivity(View view){
         Intent intent = new Intent(this, DailyForecastActivity.class);
         intent.putExtra(DAILY_FORECAST, mForecast.getDailyForecast());
+        intent.putExtra("city", mCity);
+        startActivity(intent);
+    }
+
+    @OnClick (R.id.hourlyButton)
+    public void startHourlyActivity(View view){
+        Intent intent = new Intent(this, HourlyForecastActivity.class);
+        intent.putExtra(HOURLY_FORECAST, mForecast.getHourlyForecast());
         startActivity(intent);
     }
 
